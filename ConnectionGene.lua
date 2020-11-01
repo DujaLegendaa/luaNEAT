@@ -28,13 +28,20 @@ function ConnectionGene:getWeight()
     return self.weight
 end
 
+function ConnectionGene:getInn()
+    return self.inn
+end
+
 function ConnectionGene.printConnectionGene(connectionGene)
-    io.write("In Node: ", tostring(connectionGene.inNode), "\n")
-    io.write("Out Node: ", tostring(connectionGene.outNode), "\n")
-    io.write("Weight: ", connectionGene.weight, "\n")
+    io.write("In Node:   ", tostring(connectionGene.inNode), "\n")
+    io.write("Out Node:  ", tostring(connectionGene.outNode), "\n")
+    io.write("Weight:    ", connectionGene.weight, "\n")
     io.write("Expressed: ", tostring(connectionGene.expressed), "\n")
-    io.write("Inn: ", connectionGene.inn, "\n")
-    io.write("\n")
+    io.write("Inn:       ", connectionGene.inn, "\n")
+end
+
+function ConnectionGene:copy()
+    return ConnectionGene:new(self.inNode, self.outNode, self.weight, self.expressed, self.inn)
 end
 
 return ConnectionGene

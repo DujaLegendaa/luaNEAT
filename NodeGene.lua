@@ -17,4 +17,14 @@ function NodeGene:getId()
     return self.id
 end
 
+function NodeGene:copy()
+    return NodeGene:new(self.type, self.id)
+end
+
+function NodeGene.printNodeGene(nodeGene)
+    local revTYPE = {"INPUT","HIDDEN","OUTPUT"}
+    io.write("Type: ", revTYPE[nodeGene:getType()], "\n")
+    io.write("ID:   ", nodeGene:getId(), "\n")
+end
+
 return NodeGene

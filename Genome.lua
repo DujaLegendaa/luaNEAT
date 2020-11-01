@@ -1,54 +1,79 @@
 ConnectionGene = require("ConnectionGene")
 NodeGene = require("NodeGene")
+require("Set")
+require("GenomeHelper")
 
 local Genome = {}
-
-function ternary ( cond , T , F )
-    if cond then return T else return F end
-end
+Genome.__index = Genome
 
 function Genome:new()
-    self.nodeList = {
-        NodeGene:new("INPUT", 1),
-        NodeGene:new("OUTPUT", 2)
-    }
-    self.connections = {
-        ConnectionGene:new(Genome.nodeList[1]:getId(), Genome.nodeList[2]:getId(), 0.3, true, 1)
-    }
+    local self = setmetatable({}, Genome)
+    self.nodeList = {}
+    self.connections = {}
     return self
 end
 
-function Genome:addConectionMutation()
-    math.randomseed(os.time())
-    local node1 = self.nodeList[math.random(#self.nodeList)]
-    local node2 = self.nodeList[math.random(#self.nodeList)]
 
-    local reversed = false
-    if (node1:getType() == NodeGene.TYPE["HIDDEN"] and node2:getType() == NodeGene.TYPE["INPUT"]) then
-        reversed = true
-    elseif (node1:getType() == NodeGene.TYPE["OUTPUT"] and node2:getType() == NodeGene.TYPE["HIDDEN"]) then
-        reversed = true
-    elseif (node1:getType() == NodeGene.TYPE["OUTPUT"] and node2:getType() == NodeGene.TYPE["INPUT"]) then
-        reversed = true
-    end
+function Genome:getNodeGenes()
+    return self.nodeList
+end
 
-    local connectionExists = false
-    for key, con in pairs(self.connections) do
-        if (con:getInNode() == node1:getId() and con:getOutNode() == node2:getId()) then
-            connectionExists = true
-            break
-        elseif (con:getInNode() == node2:getId() and con:getOutNode() == node1:getId()) then
-            connectionExists = true
-            break
+function Genome:getConnections()
+    return self.connections
+end
+
+function Genome:addNodeGene(nodeGene)
+    table.insert(self.nodeList, nodeGene)
+end
+
+function Genome:addConnection(connection)
+    table.insert(self.connections, connection)
+end
+
+function Genome:addConnectionMutation(maxAttempts)
+    local tries = 0
+    local success = false
+    while (tries < maxAttempts and success == false) do
+        math.randomseed(os.time())
+        local node1 = self.nodeList[math.random(#self.nodeList)]
+        local node2 = self.nodeList[math.random(#self.nodeList)]
+
+        local reversed = false
+        if (node1:getType() == NodeGene.TYPE.HIDDEN and node2:getType() == NodeGene.TYPE.INPUT) then
+            reversed = true
+        elseif (node1:getType() == NodeGene.TYPE.OUTPUT and node2:getType() == NodeGene.TYPE.HIDDEN) then
+            reversed = true
+        elseif (node1:getType() == NodeGene.TYPE.OUTPUT and node2:getType() == NodeGene.TYPE.INPUT) then
+            reversed = true
+        end
+
+        local connectionImpossible = false
+        if (node1:getType() == NodeGene.TYPE.INPUT and node2:getType() == NodeGene.TYPE.INPUT) then
+            connectionImpossible = true
+        elseif (node1:getType() == NodeGene.TYPE.OUTPUT and node2:getType() == NodeGene.TYPE.OUTPUT) then
+            connectionImpossible = true
+        end
+
+        local connectionExists = false
+        for key, con in pairs(self.connections) do
+            if (con:getInNode() == node1:getId() and con:getOutNode() == node2:getId()) then
+                connectionExists = true
+                break
+            elseif (con:getInNode() == node2:getId() and con:getOutNode() == node1:getId()) then
+                connectionExists = true
+                break
+            end
+        end
+        
+        if (connectionExists or connectionImpossible) then
+            tries = tries + 1
+        else 
+            local tempConnection = ConnectionGene:new(Ternary(reversed, node2:getId(), node1:getId()), Ternary(reversed, node1:getId(), node2:getId()),
+                                            math.random(), true, 0)
+            table.insert(self.connections, tempConnection)
+            success = true
         end
     end
-    
-    if connectionExists then
-        return
-    end
-    local tempConnection = ConnectionGene:new(ternary(reversed, node2:getId(), node1:getId()), ternary(reversed, node1:getId(), node2:getId()),
-                                        math.random(), true, 0)
-    table.insert(self.connections, tempConnection)
 end
 
 function Genome:addNodeMutation() 
@@ -68,10 +93,26 @@ function Genome:addNodeMutation()
     table.insert(self.connections, newToOut)
 end
 
-local temp = Genome:new()
-temp:addNodeMutation()
+function Genome.crossover(genome1, genome2)
+    local child = Genome:new()
+    for key, parent1Node in pairs(genome1:getNodeGenes()) do
+        child:addNodeGene(parent1Node)
+    end
 
-ConnectionGene.printConnectionGene(temp.connections[1])
-ConnectionGene.printConnectionGene(temp.connections[2])
-ConnectionGene.printConnectionGene(temp.connections[3])
+    for _, parent1Connection in pairs(genome1:getConnections()) do
+        for _, parent2Connection in pairs(genome2:getConnections()) do
+            if parent1Connection:getInn() == parent2Connection:getInn() then
+                local childConGene = Ternary(math.random(0, 1), parent1Connection:copy(), parent2Connection:copy())
+                child:addConnection(childConGene)
+            else
+                local childConGene = parent1Connection:copy()
+                child:addConnection(childConGene)
+            end
+        end
+    end
+
+    return child
+end
+
+
 
